@@ -1,0 +1,169 @@
+// ============================================================
+// PlanetCode — Prisma Schema
+// File: packages/db/prisma/schema.prisma
+// Reference: Master Prompt §15
+// See: docs/DATABASE.md for full schema documentation
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ──────────────────────────────────────────────────
+// Maps Clerk identity to application user.
+// clerkId is the unique identifier from Clerk — never store
+// Clerk secrets here, only the public user ID.
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique
+  email       String   @unique
+  displayName String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ownedPlanets     Planet[]        @relation("PlanetOwner")
+  memberships      PlanetMember[]
+  accessRequests   AccessRequest[] @relation("RequestedBy")
+  reviewedRequests AccessRequest[] @relation("ReviewedBy")
+
+  @@index([clerkId])
+  @@map("users")
+}
+
+// ─── Planet ────────────────────────────────────────────────
+// A private coding room. Contains files, members, and
+// collaborative editor state.
+model Planet {
+  id           String   @id @default(cuid())
+  planetCode   String   @unique // Format: PLN-XXXXXX (6 alphanumeric chars)
+  name         String
+  description  String?
+  passwordHash String   // bcrypt hash — NEVER return to client, NEVER log
+  ownerId      String
+  maxEditors   Int      @default(5) // Hard cap per §11
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  owner          User            @relation("PlanetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members        PlanetMember[]
+  accessRequests AccessRequest[]
+  files          File[]
+  snapshots      DocumentSnapshot[]
+
+  @@index([ownerId])
+  @@index([planetCode])
+  @@map("planets")
+}
+
+// ─── PlanetMember ──────────────────────────────────────────
+// Tracks permanent membership. ACTIVE = can access.
+// REMOVED = cannot access, including live sessions.
+model PlanetMember {
+  id       String       @id @default(cuid())
+  planetId String
+  userId   String
+  role     MemberRole   @default(MEMBER)
+  status   MemberStatus @default(ACTIVE)
+  joinedAt DateTime     @default(now())
+
+  // Relations
+  planet Planet @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([planetId, userId]) // One membership per user per planet
+  @@index([planetId])
+  @@index([userId])
+  @@index([planetId, status])  // Fast lookup for active members
+  @@map("planet_members")
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
+}
+
+enum MemberStatus {
+  ACTIVE
+  REMOVED
+}
+
+// ─── AccessRequest ─────────────────────────────────────────
+// Users request access to a Planet. Owner approves/rejects.
+// Approved → PlanetMember created with ACTIVE status.
+model AccessRequest {
+  id         String              @id @default(cuid())
+  planetId   String
+  userId     String
+  status     AccessRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+
+  // Relations
+  planet   Planet @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  user     User   @relation("RequestedBy", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User?  @relation("ReviewedBy", fields: [reviewedBy], references: [id])
+
+  @@unique([planetId, userId]) // One pending request per user per planet
+  @@index([planetId, status])  // Fast lookup for pending requests
+  @@index([userId])
+  @@map("access_requests")
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── File ──────────────────────────────────────────────────
+// Metadata + content for files within a Planet.
+// Content stored as TEXT for MVP (code = text).
+// Path validated server-side — no traversal allowed (§14).
+model File {
+  id        String   @id @default(cuid())
+  planetId  String
+  path      String   // Relative path within the planet (e.g., "src/index.ts")
+  name      String   // File name (e.g., "index.ts")
+  language  String?  // Language identifier for Monaco (e.g., "typescript")
+  mimeType  String?  // MIME type (e.g., "text/typescript")
+  content   String   @default("") // File content — TEXT column for MVP
+  size      Int      @default(0)  // Size in bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  planet Planet @relation(fields: [planetId], references: [id], onDelete: Cascade)
+
+  @@unique([planetId, path]) // No duplicate paths within a planet
+  @@index([planetId])
+  @@map("files")
+}
+
+// ─── DocumentSnapshot ──────────────────────────────────────
+// Persisted Yjs document state (§13).
+// Stores binary Yjs state so realtime server restart
+// does not lose document state.
+model DocumentSnapshot {
+  id        String   @id @default(cuid())
+  planetId  String
+  fileId    String?  // Optional: per-file snapshot, or null for whole-planet
+  state     Bytes    // Y.encodeStateAsUpdate() binary output
+  version   Int      @default(0) // Monotonic version counter
+  createdAt DateTime @default(now())
+
+  // Relations
+  planet Planet @relation(fields: [planetId], references: [id], onDelete: Cascade)
+
+  @@index([planetId, fileId])
+  @@index([planetId, version])
+  @@map("document_snapshots")
+}

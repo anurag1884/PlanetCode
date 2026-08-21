@@ -1,0 +1,52 @@
+# ============================================================
+# PlanetCode .gitignore
+# Reference: Master Prompt §19
+# ============================================================
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build outputs
+dist/
+build/
+
+# Environment variables (NEVER commit secrets)
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel/
+
+# Testing
+coverage/
+
+# Prisma
+packages/db/prisma/migrations/**/migration_lock.toml
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Turbo
+.turbo/
+
+# Misc
+*.tsbuildinfo
