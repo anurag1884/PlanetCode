@@ -1,13 +1,21 @@
 // ============================================================
 // PlanetCode — Zod Validators: Access Request
 // File: packages/validators/src/access-request.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: docs/API_AND_REALTIME.md §16 for API input specs
 // ============================================================
 
-// TODO: Define Zod schemas for:
-// - createAccessRequestSchema (planetId)
-// - accessRequestStatusSchema (enum: PENDING, APPROVED, REJECTED)
-// - reviewAccessRequestSchema (requestId)
+import { z } from "zod";
 
-export {};
+export const accessRequestStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED"]);
+
+export const createAccessRequestSchema = z.object({
+  planetId: z.string().cuid("Invalid planet ID"),
+});
+
+export const reviewAccessRequestSchema = z.object({
+  requestId: z.string().cuid("Invalid request ID"),
+});
+
+export type AccessRequestStatusInput = z.infer<typeof accessRequestStatusSchema>;
+export type CreateAccessRequestInput = z.infer<typeof createAccessRequestSchema>;
+export type ReviewAccessRequestInput = z.infer<typeof reviewAccessRequestSchema>;
+

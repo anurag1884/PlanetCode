@@ -15,6 +15,7 @@
     "y-protocols": "^1.0.6",
     "lib0": "^0.2.98",
     "zod": "^3.24.0",
+    "@clerk/backend": "^1.0.0",
     "@planetcode/db": "workspace:*",
     "@planetcode/types": "workspace:*",
     "@planetcode/validators": "workspace:*"

@@ -1,20 +1,113 @@
 // ============================================================
 // PlanetCode — Shared TypeScript Types
 // File: packages/types/src/index.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: docs/DATABASE.md and docs/API_AND_REALTIME.md for specifications
 // ============================================================
 
-// TODO: Define shared types for:
-// - Planet (id, planetCode, name, description, ownerId, maxEditors, etc.)
-// - PlanetMember (id, planetId, userId, role, status, joinedAt)
-// - AccessRequest (id, planetId, userId, status, createdAt, reviewedAt, reviewedBy)
-// - File (id, planetId, path, name, language, mimeType, content)
-// - User (id, clerkId, email, displayName, avatarUrl)
-// - WebSocket message types (join, leave, sync, awareness, error)
-// - API response types (success, error, paginated)
-// - Role enum (OWNER, MEMBER)
-// - MemberStatus enum (ACTIVE, REMOVED)
-// - AccessRequestStatus enum (PENDING, APPROVED, REJECTED)
+// ─── Enums ─────────────────────────────────────────────────
 
-export {};
+export type MemberRole = "OWNER" | "MEMBER";
+export type MemberStatus = "ACTIVE" | "REMOVED";
+export type AccessRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+// ─── Core Domain Models ─────────────────────────────────────
+// NOTE: passwordHash intentionally EXCLUDED from Planet — never send to client
+
+export interface User {
+  id: string;
+  clerkId: string;
+  email: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Planet {
+  id: string;
+  planetCode: string;
+  name: string;
+  description: string | null;
+  ownerId: string;
+  maxEditors: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PlanetMember {
+  id: string;
+  planetId: string;
+  userId: string;
+  role: MemberRole;
+  status: MemberStatus;
+  joinedAt: Date;
+}
+
+export interface AccessRequest {
+  id: string;
+  planetId: string;
+  userId: string;
+  status: AccessRequestStatus;
+  createdAt: Date;
+  reviewedAt: Date | null;
+  reviewedBy: string | null;
+}
+
+export interface PlanetFile {
+  id: string;
+  planetId: string;
+  path: string;
+  name: string;
+  language: string | null;
+  mimeType: string | null;
+  content: string;
+  size: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── WebSocket Close Codes ──────────────────────────────────
+
+export const WS_CLOSE_CODES = {
+  UNAUTHORIZED: 4001,
+  ROOM_FULL: 4003,
+  PLANET_NOT_FOUND: 4004,
+  POLICY_VIOLATION: 4008,
+} as const;
+
+export type WsCloseCode = (typeof WS_CLOSE_CODES)[keyof typeof WS_CLOSE_CODES];
+
+// ─── API Response Types ─────────────────────────────────────
+
+export interface ApiSuccess<T> {
+  success: true;
+  data: T;
+}
+
+export interface ApiError {
+  success: false;
+  error: string;
+  statusCode: number;
+}
+
+export type ApiResponse<T> = ApiSuccess<T> | ApiError;
+
+// ─── Presence / Awareness Types ─────────────────────────────
+
+export interface UserPresence {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  /** Hex color assigned to this user for cursor rendering */
+  color: string;
+  cursor?: {
+    lineNumber: number;
+    column: number;
+  };
+  selection?: {
+    startLineNumber: number;
+    startColumn: number;
+    endLineNumber: number;
+    endColumn: number;
+  };
+}
+

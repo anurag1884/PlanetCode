@@ -1,13 +1,25 @@
 // ============================================================
 // PlanetCode — Realtime Server Types
 // File: apps/realtime/src/types/index.ts
-// Status: PLACEHOLDER — not yet implemented
 // ============================================================
 
-// TODO: Define realtime-server-specific types:
-// - AuthenticatedWebSocket (WebSocket + userId + planetId)
-// - RoomState
-// - ConnectionResult (success/failure with reason)
-// - Re-export shared types from @planetcode/types
+import type WebSocket from "ws";
+import type { WsCloseCodeValue } from "../lib/constants";
 
-export {};
+/** A WebSocket connection enriched with verified auth context */
+export interface AuthenticatedClient {
+  ws: WebSocket;
+  userId: string;
+  planetId: string;
+  connectedAt: Date;
+}
+
+export interface ConnectionResult {
+  success: boolean;
+  userId?: string;
+  reason?: string;
+  closeCode?: WsCloseCodeValue;
+}
+
+export type { WsCloseCodeValue };
+

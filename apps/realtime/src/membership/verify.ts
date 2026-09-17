@@ -1,18 +1,39 @@
 // ============================================================
 // PlanetCode — Membership Verification (Realtime Server)
 // File: apps/realtime/src/membership/verify.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: Master Prompt §6, §8 for membership verification
 // ============================================================
 
-// TODO: Implement membership verification:
-// - verifyMembership(userId, planetId): Check DB for ACTIVE membership
-// - Called on every connection/reconnection (never cached)
-// - handleMemberRemoval(userId, planetId): Force disconnect removed member
-//   1. Find their WebSocket connection
-//   2. Close it immediately
-//   3. Remove from Yjs Awareness
-//   4. Release capacity slot
-// - Listen for removal notifications (Postgres LISTEN/NOTIFY or internal API)
+import { prisma } from "../lib/db";
 
-export {};
+/**
+ * Verifies that a user has ACTIVE membership for a planet.
+ * Called on every connection/reconnection — never cached per security policy.
+ */
+export async function verifyActiveMembership(
+  userId: string,
+  planetId: string,
+): Promise<boolean> {
+  const membership = await prisma.planetMember.findFirst({
+    where: {
+      planetId,
+      userId,
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  });
+
+  return membership !== null;
+}
+
+/**
+ * Checks whether a planet exists. Used before membership check
+ * so we can return PLANET_NOT_FOUND vs UNAUTHORIZED.
+ */
+export async function planetExists(planetId: string): Promise<boolean> {
+  const planet = await prisma.planet.findUnique({
+    where: { id: planetId },
+    select: { id: true },
+  });
+  return planet !== null;
+}
+

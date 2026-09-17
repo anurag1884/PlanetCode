@@ -1,13 +1,18 @@
 // ============================================================
 // PlanetCode — Zod Validators: Member
 // File: packages/validators/src/member.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: docs/API_AND_REALTIME.md §16 for API input specs
 // ============================================================
 
-// TODO: Define Zod schemas for:
-// - memberRoleSchema (enum: OWNER, MEMBER)
-// - memberStatusSchema (enum: ACTIVE, REMOVED)
-// - removeMemberSchema (memberId)
+import { z } from "zod";
 
-export {};
+export const memberRoleSchema = z.enum(["OWNER", "MEMBER"]);
+export const memberStatusSchema = z.enum(["ACTIVE", "REMOVED"]);
+
+export const removeMemberSchema = z.object({
+  memberId: z.string().cuid("Invalid member ID"),
+});
+
+export type MemberRoleInput = z.infer<typeof memberRoleSchema>;
+export type MemberStatusInput = z.infer<typeof memberStatusSchema>;
+export type RemoveMemberInput = z.infer<typeof removeMemberSchema>;
+

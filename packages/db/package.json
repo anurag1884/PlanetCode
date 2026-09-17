@@ -2,8 +2,15 @@
   "name": "@planetcode/db",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "db:generate": "prisma generate",
@@ -17,8 +24,10 @@
     "@prisma/client": "^6.2.0"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
     "prisma": "^6.2.0",
     "typescript": "^5.7.0",
     "tsx": "^4.19.0"
   }
 }
+

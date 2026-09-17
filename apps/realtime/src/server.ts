@@ -1,25 +1,67 @@
 // ============================================================
 // PlanetCode — Realtime Server Entry Point
 // File: apps/realtime/src/server.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: docs/ARCHITECTURE.md for server architecture
-// See: docs/API_AND_REALTIME.md for WebSocket protocol
 // ============================================================
 
-// TODO: Implement the realtime server:
-// 1. Create HTTP server (for health checks)
-// 2. Create WebSocket server (ws package) on top of HTTP server
-// 3. On WS connection:
-//    a. Verify Clerk session token (§9)
-//    b. Identify user from token
-//    c. Extract planetId from connection URL/params
-//    d. Verify planet exists
-//    e. Verify membership ACTIVE (§8)
-//    f. Check room capacity atomically (§11)
-//    g. Join Yjs room
-//    h. Set up message handlers
-// 4. On WS message: route to Yjs sync / awareness handlers
-// 5. On WS close: cleanup, update capacity, remove from awareness
-// 6. Graceful shutdown: persist all Yjs state, close connections
+import http from "http";
+import { WebSocketServer } from "ws";
+import { DEFAULT_PORT } from "./lib/constants";
+import { handleConnection } from "./handlers/connection";
+import { RoomManager } from "./rooms/RoomManager";
+import { startScheduler, stopScheduler } from "./persistence/scheduler";
 
-export {};
+const roomManager = new RoomManager();
+
+// ── HTTP Server (health check) ────────────────────────────────
+const httpServer = http.createServer((req, res) => {
+  if (req.url === "/health" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }));
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
+
+// ── WebSocket Server ──────────────────────────────────────────
+const wss = new WebSocketServer({ server: httpServer });
+
+wss.on("connection", (ws, req) => {
+  // Connection handler is async — void to suppress unhandled promise warning
+  void handleConnection(ws, req, roomManager);
+});
+
+// ── Persistence Scheduler ─────────────────────────────────────
+startScheduler(roomManager);
+
+// ── Start Listening ───────────────────────────────────────────
+httpServer.listen(DEFAULT_PORT, () => {
+  console.log(`\n🚀 PlanetCode Realtime Server`);
+  console.log(`   HTTP health: http://localhost:${DEFAULT_PORT}/health`);
+  console.log(`   WebSocket:   ws://localhost:${DEFAULT_PORT}`);
+  console.log(`   Max editors: 5 per planet\n`);
+});
+
+// ── Graceful Shutdown ─────────────────────────────────────────
+async function shutdown(signal: string): Promise<void> {
+  console.log(`\n[Server] ${signal} received — shutting down gracefully...`);
+
+  await stopScheduler(roomManager);
+
+  wss.close(() => {
+    httpServer.close(() => {
+      console.log("[Server] Closed. Bye 👋");
+      process.exit(0);
+    });
+  });
+
+  // Force exit if graceful shutdown takes too long
+  setTimeout(() => {
+    console.error("[Server] Forced exit after timeout");
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
+

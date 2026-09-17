@@ -1,23 +1,24 @@
 // ============================================================
 // PlanetCode — Root Layout
 // File: apps/web/src/app/layout.tsx
-// Status: PLACEHOLDER — not yet implemented
 // ============================================================
 
-// TODO: Implement root layout with:
-// - ClerkProvider (when Clerk is integrated)
-// - Global CSS import
-// - Inter font from Google Fonts
-// - Metadata (title, description, etc.)
-// - ThemeProvider for dark mode
-
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "@/styles/globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "PlanetCode — Collaborative Code Editor",
   description:
     "A secure, browser-based, real-time collaborative code editor. Create private coding rooms and edit together.",
+  keywords: ["collaborative", "code editor", "real-time", "websocket"],
 };
 
 export default function RootLayout({
@@ -26,12 +27,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        {/* TODO: Wrap with ClerkProvider */}
-        {/* TODO: Wrap with ThemeProvider */}
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={inter.variable} suppressHydrationWarning>
+        <body className="min-h-screen bg-background text-foreground antialiased">
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
+

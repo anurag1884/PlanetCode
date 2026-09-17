@@ -1,15 +1,46 @@
 // ============================================================
 // PlanetCode — Zod Validators: File
 // File: packages/validators/src/file.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: docs/API_AND_REALTIME.md §16 for API input specs
-// See: docs/SECURITY.md §14 for path traversal protection
 // ============================================================
 
-// TODO: Define Zod schemas for:
-// - createFileSchema (path, name, language?, content?)
-// - updateFileSchema (name?, path?, content?)
-// - fileIdParamSchema (id: cuid/uuid)
-// - filePathSchema (validate against traversal: no ../, no absolute paths)
+import { z } from "zod";
 
-export {};
+// Safe path: no traversal, no absolute, no null bytes, safe chars only
+export const filePathSchema = z
+  .string()
+  .min(1, "Path is required")
+  .max(500, "Path too long")
+  .refine((p) => !p.includes(".."), "Path traversal not allowed")
+  .refine((p) => !p.startsWith("/"), "Absolute paths not allowed")
+  .refine((p) => !p.startsWith("\\"), "Absolute paths not allowed")
+  .refine((p) => !p.includes("\0"), "Null bytes not allowed")
+  .refine(
+    (p) => /^[a-zA-Z0-9._\-/]+$/.test(p),
+    "Path contains invalid characters",
+  );
+
+export const createFileSchema = z.object({
+  path: filePathSchema,
+  name: z.string().trim().min(1, "File name required").max(255),
+  language: z.string().max(50).optional(),
+  content: z
+    .string()
+    .max(1_000_000, "File content exceeds 1MB limit")
+    .optional()
+    .default(""),
+});
+
+export const updateFileSchema = z.object({
+  name: z.string().trim().min(1).max(255).optional(),
+  path: filePathSchema.optional(),
+  content: z.string().max(1_000_000, "File content exceeds 1MB limit").optional(),
+  language: z.string().max(50).optional(),
+});
+
+export const fileIdParamSchema = z.object({
+  id: z.string().cuid("Invalid file ID"),
+});
+
+export type CreateFileInput = z.infer<typeof createFileSchema>;
+export type UpdateFileInput = z.infer<typeof updateFileSchema>;
+

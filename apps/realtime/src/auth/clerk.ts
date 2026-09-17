@@ -1,15 +1,32 @@
 // ============================================================
 // PlanetCode — Clerk Auth for WebSocket
 // File: apps/realtime/src/auth/clerk.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: Master Prompt §9 for WS auth requirements
 // ============================================================
 
-// TODO: Implement Clerk session verification for WebSocket:
-// - Extract session token from WS handshake (e.g., cookie or Authorization header)
-// - Verify token using Clerk's server-side SDK
-// - Return verified userId on success
-// - Reject connection with generic error on failure
-// - NEVER accept client-declared userId (§9)
+import { verifyToken } from "@clerk/backend";
+import { WS_CLOSE_CODES } from "../lib/constants";
 
-export {};
+/**
+ * Verifies a Clerk session token and returns the clerkId (userId).
+ * Throws on any failure — callers must close the socket on throw.
+ *
+ * SECURITY: Never accept client-declared userId — always derive from token.
+ */
+export async function verifyClerkToken(token: string): Promise<string> {
+  try {
+    const payload = await verifyToken(token, {
+      secretKey: process.env["CLERK_SECRET_KEY"] ?? "",
+    });
+
+    if (!payload.sub) {
+      throw new Error("Token is missing sub claim");
+    }
+
+    return payload.sub; // Clerk's userId (clerkId)
+  } catch {
+    const err = new Error("Unauthorized: invalid or expired token");
+    (err as NodeJS.ErrnoException).code = String(WS_CLOSE_CODES.UNAUTHORIZED);
+    throw err;
+  }
+}
+

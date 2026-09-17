@@ -1,13 +1,28 @@
 // ============================================================
 // PlanetCode — WebSocket Message Validators
 // File: apps/realtime/src/lib/validators.ts
-// Status: PLACEHOLDER — not yet implemented
-// See: Master Prompt §20 for validation requirements
 // ============================================================
 
-// TODO: Define Zod schemas for WebSocket messages:
-// - wsConnectionParamsSchema (planetId from URL)
-// - wsMessageSchema (type discriminator + payload)
-// - Validate every incoming WS message before processing
+import { z } from "zod";
+import { MAX_WS_MESSAGE_SIZE_BYTES } from "./constants";
 
-export {};
+/** Validates URL query params on WebSocket connection */
+export const wsConnectionParamsSchema = z.object({
+  planetId: z.string().cuid("planetId must be a valid CUID"),
+});
+
+/**
+ * Returns true if the message is within the allowed size.
+ * Called before any message processing.
+ */
+export function isWithinSizeLimit(data: Buffer | ArrayBuffer | string): boolean {
+  const size = Buffer.isBuffer(data)
+    ? data.byteLength
+    : typeof data === "string"
+      ? Buffer.byteLength(data, "utf8")
+      : data.byteLength;
+  return size <= MAX_WS_MESSAGE_SIZE_BYTES;
+}
+
+export type WsConnectionParams = z.infer<typeof wsConnectionParamsSchema>;
+

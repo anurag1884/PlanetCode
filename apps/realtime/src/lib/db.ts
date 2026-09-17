@@ -1,13 +1,9 @@
 // ============================================================
 // PlanetCode — Prisma Client for Realtime Server
 // File: apps/realtime/src/lib/db.ts
-// Status: PLACEHOLDER — not yet implemented
 // ============================================================
 
-// TODO: Import and re-export PrismaClient from @planetcode/db
-// The realtime server needs direct DB access for:
-// - Membership verification on every connection
-// - Loading/saving Yjs document snapshots
-// - Planet existence checks
+// Re-export the shared Prisma client singleton from @planetcode/db
+// The realtime server uses it for: membership checks, planet lookups, snapshots
+export { prisma } from "@planetcode/db";
 
-export {};
